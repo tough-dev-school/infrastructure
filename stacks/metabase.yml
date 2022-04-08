@@ -1,0 +1,58 @@
+---
+- name: Make sure stack directory is present
+  file:
+    path: /srv/metabase
+    state: directory
+
+- name: Deploy environment files
+  template:
+    src: env/{{ item }}
+    dest: /srv/metabase/{{ item }}
+  loop:
+    - postgres-backup.env
+
+- name: Deploy the metabase stack
+  docker_stack:
+    name: metabase
+    resolve_image: never
+    with_registry_auth: true
+    compose:
+      - version: "3.6"
+        services:
+          backend:
+            image: metabase/metabase:v0.42.4
+            environment:
+              JAVA_TIMEZONE: "Europe/Moscow"
+              MB_DB_TYPE: postgres
+              MB_DB_HOST: "{{ postgresql_host }}"
+              MB_DB_PORT: "{{ postgresql_port }}"
+              MB_DB_USER: "{{ metabase_postgresql_user }}"
+              MB_DB_PASS: "{{ metabase_postgresql_password }}"
+              MB_DB_DBNAME: "{{ metabase_postgresql_database }}"
+
+            deploy:
+              labels:
+                - "traefik.enable=true"
+                - "traefik.port=3000"
+                - "traefik.frontend.rule=Host:dashboard.tough-dev.school"
+                - "traefik.docker.network=traefiknet"
+            networks:
+              - traefiknet
+
+          postgres-backup:
+            image: f213/postgres-backup-s3
+            env_file:
+              - /srv/metabase/postgres-backup.env
+            environment:
+              SCHEDULE: 0 30 */6 * * * # every 6 hours at HH:30
+              S3_PREFIX: metabase-postgres
+              HEALTHCHECKS_IO_CHECK_ID: 9d1a7a51-6d3c-4c7e-bb9c-ff0ec8dd0d94
+              POSTGRES_DATABASE: "{{ metabase_postgresql_database }}"
+              POSTGRES_USER: "{{ metabase_postgresql_user }}"
+              POSTGRES_PASSWORD: "{{ metabase_postgresql_password }}"
+              POSTGRES_HOST: "{{ postgresql_host }}"
+              POSTGRES_PORT: "{{ postgresql_port }}"
+
+        networks:
+          traefiknet:
+            external: true

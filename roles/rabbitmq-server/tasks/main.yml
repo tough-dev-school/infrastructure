@@ -1,0 +1,92 @@
+---
+- name: Add RabbitMQ team key
+  apt_key:
+    keyserver: keyserver.ubuntu.com
+    id: "0x0A9AF2115F4687BD29803A206B73A36E6026DFCA"
+
+- name: Add cloudsmith.io keys
+  apt_key:
+    url: "{{ item }}"
+  loop:
+    - https://dl.cloudsmith.io/public/rabbitmq/rabbitmq-erlang/gpg.E495BB49CC4BBE5B.key
+    - https://dl.cloudsmith.io/public/rabbitmq/rabbitmq-server/gpg.9F4587F226208342.key
+
+- name: Add cloudsmith.io repos
+  apt_repository:
+    repo: "deb {{ item }} focal main"
+  loop:
+    - https://dl.cloudsmith.io/public/rabbitmq/rabbitmq-erlang/deb/ubuntu
+    - https://dl.cloudsmith.io/public/rabbitmq/rabbitmq-server/deb/ubuntu
+
+- name: Install erlang
+  apt:
+    name:
+      - erlang-base
+      - erlang-asn1
+      - erlang-crypto
+      - erlang-eldap
+      - erlang-ftp
+      - erlang-inets
+      - erlang-mnesia
+      - erlang-os-mon
+      - erlang-parsetools
+      - erlang-public-key
+      - erlang-runtime-tools
+      - erlang-snmp
+      - erlang-ssl
+      - erlang-syntax-tools
+      - erlang-tftp
+      - erlang-tools
+      - erlang-xmerl
+
+- name: Install RabbitMQ
+  apt:
+    name: rabbitmq-server
+  notify:
+    - Restart RabbitMQ
+
+- name: Deploy RabbitMQ configuration files
+  template:
+    src: templates/rabbitmq.conf.j2
+    dest: /etc/rabbitmq/rabbitmq.conf
+  notify:
+    - Restart RabbitMQ
+
+- name: Calculate RabbitMQ default node name
+  set_fact:
+    rabbitmq_node: "rabbit@{{ ansible_hostname }}"
+
+- name: Enable management plugin
+  community.rabbitmq.rabbitmq_plugin:
+    names: rabbitmq_management
+
+- name: Create RabbitMQ vhost
+  community.rabbitmq.rabbitmq_vhost:
+    node: "{{ rabbitmq_node }}"
+    name: "/{{ rabbitmq_vhost }}"
+
+- name: Create RabbitMQ users
+  community.rabbitmq.rabbitmq_user:
+    node: "{{ rabbitmq_node }}"
+    user: "{{ item.username }}"
+    password: "{{ item.password }}"
+    vhost: "/{{ rabbitmq_vhost }}"
+    read_priv: .*
+    write_priv: .*
+    configure_priv: .*
+  loop:
+    - username: "{{ rabbitmq_user }}"
+      password: "{{ rabbitmq_password }}"
+  loop_control:
+    label: "{{ item.username }}"
+
+- name: Create RabbitMQ user for administration
+  community.rabbitmq.rabbitmq_user:
+    node: "{{ rabbitmq_node }}"
+    user: "{{ rabbitmq_admin_user }}"
+    password: "{{ rabbitmq_admin_password }}"
+    vhost: "/{{ rabbitmq_vhost }}"
+    tags: "administrator"
+    read_priv: .*
+    write_priv: .*
+    configure_priv: .*

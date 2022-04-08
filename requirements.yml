@@ -1,0 +1,11 @@
+---
+roles:
+  - geerlingguy.swap
+  - geerlingguy.security
+  - geerlingguy.redis
+  - datadog.datadog
+collections:
+  - community.general
+  - community.docker
+  - community.postgresql
+  - community.rabbitmq

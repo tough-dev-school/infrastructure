@@ -1,0 +1,122 @@
+---
+- name: Add postgresql.org GPG key
+  apt_key:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+
+- name: Add postgresql.org APT repo
+  apt_repository:
+    repo: deb https://apt.postgresql.org/pub/repos/apt focal-pgdg main
+
+- name: Install postgresql server
+  apt:
+    name: postgresql-13
+
+- name: Apply postgres daemon configuration
+  template:
+    src: templates/postgresql.conf.j2
+    dest: /etc/postgresql/13/main/postgresql.conf
+  notify:
+    - Restart postgres
+
+- name: Enable local login
+  community.postgresql.postgresql_pg_hba:
+    dest: /etc/postgresql/13/main/pg_hba.conf
+    contype: local
+    users: postgres
+    method: trust
+  notify:
+    - Reload postgres
+
+- name: Reload postgres if required
+  meta: flush_handlers # let pg be restarted first time we do this
+
+- name: Enable vlan login
+  community.postgresql.postgresql_pg_hba:
+    dest: /etc/postgresql/13/main/pg_hba.conf
+    contype: hostssl
+    users: all
+    method: md5
+    source: "{{ vlan }}"
+
+- name: Create databases
+  community.postgresql.postgresql_db:
+    login_port: "{{ postgresql_port }}"
+    name: "{{ item }}"
+  loop:
+    - "{{ app_postgresql_database }}"
+    - "{{ tg_antispam_postgresql_database }}"
+    - "{{ metabase_postgresql_database }}"
+
+- name: Create user accounts
+  community.postgresql.postgresql_user:
+    login_port: "{{ postgresql_port }}"
+    name: "{{ item.user }}"
+    password: "{{ item.password }}"
+  loop:
+    - user: "{{ app_postgresql_user }}"
+      password: "{{ app_postgresql_password }}"
+    - user: "{{ postgresql_analytics_user }}"
+      password: "{{ postgresql_analytics_password }}"
+    - user: "{{ tg_antispam_postgresql_user }}"
+      password: "{{ tg_antispam_postgresql_password }}"
+    - user: "{{ metabase_postgresql_user }}"
+      password: "{{ metabase_postgresql_password }}"
+
+  loop_control:
+    label: "{{ item.user }}"
+
+- name: Grant database permissions to the production users
+  community.postgresql.postgresql_privs:
+    database: "{{ item.database }}"
+    login_port: "{{ postgresql_port }}"
+    privs: ALL
+    roles: "{{ item.user }}"
+    type: database
+  loop:
+    - database: "{{ app_postgresql_database }}"
+      user: "{{ app_postgresql_user }}"
+    - database: "{{ tg_antispam_postgresql_database }}"
+      user: "{{ tg_antispam_postgresql_user }}"
+    - database: "{{ metabase_postgresql_database }}"
+      user: "{{ metabase_postgresql_user }}"
+
+- name: Grant permissions for all future tables to the production user
+  community.postgresql.postgresql_privs:
+    database: "{{ item.database }}"
+    login_port: "{{ postgresql_port }}"
+    objs: ALL_DEFAULT
+    privs: ALL
+    type: default_privs
+    roles: "{{ item.user }}"
+    grant_option: yes
+  loop:
+    - database: "{{ app_postgresql_database }}"
+      user: "{{ app_postgresql_user }}"
+    - database: "{{ tg_antispam_postgresql_database }}"
+      user: "{{ tg_antispam_postgresql_user }}"
+    - database: "{{ metabase_postgresql_database }}"
+      user: "{{ metabase_postgresql_user }}"
+
+- name: GRANT CONNECT TO {{ postgresql_analytics_user }}
+  community.postgresql.postgresql_privs:
+    database: "{{ item }}"
+    login_port: "{{ postgresql_port }}"
+    privs: CONNECT
+    type: database
+    role: "{{ postgresql_analytics_user }}"
+  loop:
+    - "{{ app_postgresql_database }}"
+    - "{{ tg_antispam_postgresql_database }}"
+    - "{{ metabase_postgresql_database }}"
+
+- name: GRANT SELECT ON ALL TABLES IN SCHEMA public TO {{ postgresql_analytics_user }}
+  community.postgresql.postgresql_privs:
+    database: "{{ item }}"
+    login_port: "{{ postgresql_port }}"
+    privs: SELECT
+    objs: ALL_IN_SCHEMA
+    role: "{{ postgresql_analytics_user }}"
+  loop:
+    - "{{ app_postgresql_database }}"
+    - "{{ tg_antispam_postgresql_database }}"
+    - "{{ metabase_postgresql_database }}"

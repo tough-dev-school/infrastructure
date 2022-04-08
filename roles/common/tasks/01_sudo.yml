@@ -1,0 +1,6 @@
+---
+- name: Allow members of the 'sudo' group passwordless sudo
+  copy:
+    content: "%sudo ALL=(ALL:ALL) NOPASSWD:ALL"
+    dest: /etc/sudoers.d/10-passwordless-sudo-for-sudo-group
+    mode: 0440

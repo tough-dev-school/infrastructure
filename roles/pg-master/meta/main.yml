@@ -1,0 +1,6 @@
+---
+dependencies:
+  - role: geerlingguy.swap
+    vars:
+      swap_file_size_mb: 2048
+      swap_swappiness: 5

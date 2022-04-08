@@ -1,0 +1,67 @@
+---
+- name: Make sure stack directory is present
+  file:
+    path: /srv/site
+    state: directory
+
+- name: Make sure traefik configuration is actual
+  template:
+    src: templates/traefik.toml.j2
+    dest: /srv/site/traefik.toml
+
+- name: Deploy developer access passwordfile
+  community.general.htpasswd:
+    path: /srv/site/htpasswd.tech
+    name: "{{ tech_http_user }}"
+    password: "{{ tech_http_password }}"
+
+- name: Make sure ingress network is up
+  docker_network:
+    name: traefiknet
+    driver: overlay
+
+- name: Deploy the site stack
+  docker_stack:
+    name: site
+    resolve_image: never
+    with_registry_auth: true
+    compose:
+      - version: "3.6"
+
+        services:
+          traefik:
+            image: traefik:1.7.3
+            ports:
+              - "80:80"
+
+            volumes:
+              - /var/run/docker.sock:/var/run/docker.sock:ro
+              - /srv/site/traefik.toml:/traefik.toml
+              - /srv/site/htpasswd.tech:/htpasswd.tech
+
+            deploy:
+              placement:
+                constraints:
+                  - node.hostname == {{ hostvars[groups['managers'][0]]['swarm_manager_hostname'] }}
+
+            networks:
+              - traefiknet
+
+          periodic-prune:
+            image: f213/periodic-docker-prune:1.1.1
+            deploy:
+              mode: global
+            volumes:
+              - /var/run/docker.sock:/var/run/docker.sock
+
+          logs:
+            image: gliderlabs/logspout:v3.2.14
+            command: "{{ log_destination }}"
+            deploy:
+              mode: global
+            volumes:
+              - /var/run/docker.sock:/var/run/docker.sock
+
+        networks:
+          traefiknet:
+            external: true

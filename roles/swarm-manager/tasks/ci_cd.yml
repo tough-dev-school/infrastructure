@@ -1,0 +1,8 @@
+---
+- name: Make sure CI user is able to access docker registry
+  become: yes
+  become_user: circle
+  docker_login:
+    registry_url: "{{ container_registry_host }}"
+    username: "{{ container_registry_login }}"
+    password: "{{ container_registry_password }}"

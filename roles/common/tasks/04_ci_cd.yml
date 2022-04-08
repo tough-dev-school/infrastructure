@@ -1,0 +1,14 @@
+---
+- name: Make sure CI account is added
+  user:
+    name: circle
+    groups:
+      - root
+      - sudo
+      - docker
+    shell: /bin/bash
+
+- name: Make sure CI ssh keys are present
+  authorized_key:
+    user: circle
+    key: "{{ ci_key }}"

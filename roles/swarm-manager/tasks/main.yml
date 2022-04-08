@@ -1,0 +1,11 @@
+---
+- include_tasks: docker_swarm.yml
+- include_tasks: ci_cd.yml
+- include_tasks: postgres_client.yml
+
+- include_tasks: stacks/site.yml
+- include_tasks: stacks/ackee.yml
+- include_tasks: stacks/app.yml
+- include_tasks: stacks/metabase.yml
+- include_tasks: stacks/invoice.yml
+- include_tasks: stacks/tg-antispam.yml

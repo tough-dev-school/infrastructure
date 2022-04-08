@@ -1,0 +1,40 @@
+---
+- name: Make sure stack directory is present
+  file:
+    path: /srv/invoice
+    state: directory
+
+- name: Deploy environment files
+  template:
+    src: env/{{ item }}
+    dest: /srv/invoice/{{ item }}
+  loop:
+    - invoice-bot.env
+
+- name: Deploy the invoice stack
+  docker_stack:
+    name: invoice
+    resolve_image: never
+    with_registry_auth: true
+    compose:
+      - version: "3.6"
+        services:
+          bot:
+            image: "ghcr.io/tough-dev-school/invoice-bot"
+            env_file: /srv/invoice/invoice-bot.env
+            environment:
+              BOT_NAME: invoice-bot
+            deploy:
+              update_config:
+                failure_action: rollback
+              labels:
+                - "traefik.enable=true"
+                - "traefik.port=8000"
+                - "traefik.frontend.rule=Host:invoice-bot.tough-dev.school"
+                - "traefik.docker.network=traefiknet"
+            networks:
+              - traefiknet
+
+        networks:
+          traefiknet:
+            external: true

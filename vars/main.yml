@@ -1,0 +1,15 @@
+---
+absolute_url: app.tough-dev.school
+vlan: 192.168.0.0/24
+postgresql_host: 192.168.0.5
+postgresql_port: 5432
+redis_host: 192.168.0.5
+mongodb_host: 192.168.0.5
+rabbitmq_host: 192.168.0.5
+rabbitmq_port: 5672
+
+app_user: nobody
+app_group: nogroup
+url: borshev.com
+ci_key: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDShHVU2zCOTIUJFp5DLVTj7lq2YLH3kmoG71+0cPyAegURAhBxcRM2PBkhpgxRKKAAlASrMx/sWZ2k5rc8Er/mhcR1HTmgmsMmXhNivbMtZx+I5wDPB8PP2Ve3/HLXQlUNvxupIcxvBTu+aPdGHzXzIfMms0qe2UPtpatXyMooCFsK6vf30Sb816nm0P0QHd2T+3ldG4dwbBAJRIJYCEDm8HcF5esIw5pjKMbxx/lvi0v8ejv1ZvVoktMqJBDlLPYJ4gfxGMTGL70TCAkYbEwO0r4vtOqsrMJxeyOtf8zAD6h7a5cwcX1EnVfDVUbD2d62Sb2fo1ba4NUpltfmGTOWRcHkWegDCwk1BfUS7Rmuvh2piWc/oiFasuI1KAyI5ON7YT56u82aUINicqIhPoSbmLTPXMQTlodXnEZSS75gMnZxICZVNHAdIhX/ogZFo1+s2SeJHbEcZOTCt/PJu9+yYVPJ3HF9SHqLcalm6UOCHmCEQRQjuWjCrQw2VBlhozk=
+time_zone: Europe/Moscow

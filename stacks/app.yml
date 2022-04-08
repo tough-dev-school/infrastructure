@@ -1,0 +1,165 @@
+---
+- name: Make sure stack directory is present
+  file:
+    path: /srv/app
+    state: directory
+
+- name: Deploy environment files
+  template:
+    src: env/{{ item }}
+    dest: /srv/app/{{ item }}
+  loop:
+    - app.env
+    - app-dynamic.env
+    - app-jwt-private.key
+    - app-jwt-public.key
+    - postgres-backup.env
+
+- name: Deploy docker secerts
+  community.docker.docker_secret:
+    name: "{{ item }}"
+    data_src: "/srv/app/{{ item }}"
+  loop:
+    - app-jwt-private.key
+    - app-jwt-public.key
+
+- name: Deploy the app stack
+  docker_stack:
+    name: app
+    resolve_image: never
+    with_registry_auth: true
+    compose:
+      - version: "3.6"
+        x-deploy-options: &deploy
+          update_config:
+            parallelism: 2
+            delay: 3s
+            failure_action: rollback
+            order: start-first
+
+        x-defaults: &defaults
+          env_file:
+            - /srv/app/app.env
+            - /srv/app/app-dynamic.env
+          secrets:
+            - source: app-jwt-private.key
+              target: /private.key
+            - source: app-jwt-public.key
+              target: /public.key
+          networks:
+            - stacknet
+          deploy:
+            <<: *deploy
+
+        services:
+          backend:
+            <<: *defaults
+            image: ghcr.io/tough-dev-school/monolith-web
+            deploy:
+              <<: *deploy
+              replicas: 2
+              labels:
+                - "traefik.enable=true"
+                - "traefik.port=8000"
+                - "traefik.frontend.rule=Host:{{ absolute_url }}"
+                - "traefik.docker.network=traefiknet"
+            networks:
+              - stacknet
+              - traefiknet
+
+          worker:
+            <<: *defaults
+            image: ghcr.io/tough-dev-school/monolith-worker
+            environment:
+              QUEUE: celery
+              concurrency: 4
+            deploy:
+              <<: *deploy
+              replicas: 2
+
+          scheduler:
+            <<: *defaults
+            image: ghcr.io/tough-dev-school/monolith-scheduler
+
+          lms:
+            image: ghcr.io/tough-dev-school/lms-frontend
+            environment:
+              BACKEND_URL: http://app_backend:8000
+            deploy:
+              <<: *deploy
+              labels:
+                - "traefik.enable=true"
+                - "traefik.port=3000"
+                - "traefik.frontend.rule=Host:lms.tough-dev.school"
+                - "traefik.docker.network=traefiknet"
+            networks:
+              - stacknet
+              - traefiknet
+
+          certificates:
+            image: ghcr.io/tough-dev-school/certificates-frontend
+            environment:
+              BACKEND_URL: http://app_backend:8000
+            deploy:
+              <<: *deploy
+              labels:
+                - "traefik.enable=true"
+                - "traefik.port=3000"
+                - "traefik.frontend.rule=Host:cert.tough-dev.school"
+                - "traefik.docker.network=traefiknet"
+            networks:
+              - stacknet
+              - traefiknet
+
+          flower:
+            image: mher/flower:0.9.7
+            command: "celery --broker=amqp://{{ rabbitmq_user }}:{{ rabbitmq_password }}@{{ rabbitmq_host }}:{{ rabbitmq_port }}//{{ rabbitmq_vhost }} flower --url-prefix=tech/flower"
+            networks:
+              - traefiknet
+            deploy:
+              labels:
+                - "traefik.enable=true"
+                - "traefik.port=5555"
+                - "traefik.frontend.rule=Host:{{ absolute_url }}; PathPrefix:/tech/flower"
+                - "traefik.frontend.auth.basic.usersFile=/htpasswd.tech"
+                - "traefik.docker.network=traefiknet"
+
+          rabbitmq-management:
+            image: ghcr.io/fandsdev/adhoc-proxy
+            environment:
+              - "TARGET=http://{{ rabbitmq_host }}:15672"
+            networks:
+              - traefiknet
+            deploy:
+              labels:
+                - "traefik.enable=true"
+                - "traefik.port=3000"
+                - "traefik.frontend.rule=Host:{{ absolute_url }}; PathPrefixStrip:/tech/rabbitmq"
+                - "traefik.frontend.auth.basic.usersFile=/htpasswd.tech"
+                - "traefik.docker.network=traefiknet"
+
+          postgres-backup:
+            image: f213/postgres-backup-s3
+            env_file:
+              - /srv/app/postgres-backup.env
+            environment:
+              SCHEDULE: 0 30 */6 * * * # every 6 hours at HH:30
+              S3_PREFIX: app-postgres
+              HEALTHCHECKS_IO_CHECK_ID: 0aaac656-5eeb-490c-a794-5c813b89eadd
+              POSTGRES_DATABASE: "{{ app_postgresql_database }}"
+              POSTGRES_USER: "{{ app_postgresql_user }}"
+              POSTGRES_PASSWORD: "{{ app_postgresql_password }}"
+              POSTGRES_HOST: "{{ postgresql_host }}"
+              POSTGRES_PORT: "{{ postgresql_port }}"
+
+        networks:
+          traefiknet:
+            external: true
+          stacknet:
+            driver: overlay
+
+        secrets:
+          app-jwt-private.key:
+            external: true
+          app-jwt-public.key:
+            external: true

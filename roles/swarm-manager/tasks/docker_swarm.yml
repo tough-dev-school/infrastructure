@@ -1,0 +1,27 @@
+---
+- name: Determine swarm manager address
+  set_fact:
+    swarm_manager_address: "{{ hostvars[groups['managers'][0]]['ansible_facts']['eth1']['ipv4']['address'] }}"
+    swarm_manager_hostname: "{{ hostvars[groups['managers'][0]]['ansible_facts']['nodename'] }}"
+
+- name: Make sure swarm is initialized
+  docker_swarm:
+    state: present
+    advertise_addr: "{{ swarm_manager_address }}"
+    listen_addr: "{{ swarm_manager_address }}"
+
+- name: Get swarm info
+  community.docker.docker_swarm_info:
+    nodes: yes
+  register: swarm
+
+- name: Store join tokens
+  set_fact:
+    worker_join_token: "{{ swarm.swarm_facts.JoinTokens.Worker }}"
+    manager_join_token: "{{ swarm.swarm_facts.JoinTokens.Manager }}"
+
+- name: Log in to the container registry
+  docker_login:
+    registry_url: "{{ container_registry_host }}"
+    username: "{{ container_registry_login }}"
+    password: "{{ container_registry_password }}"

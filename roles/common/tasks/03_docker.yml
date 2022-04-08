@@ -1,0 +1,20 @@
+---
+- name: Add docker.com GPG key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+
+- name: Add docker.com apt repository
+  apt_repository:
+    repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
+
+- name: Install required packages
+  apt:
+    name:
+      - docker-ce
+      - docker-compose
+      - python3-pip
+      - python3-jsondiff
+
+- name: Make sure docker python module is installed
+  pip:
+    name: docker

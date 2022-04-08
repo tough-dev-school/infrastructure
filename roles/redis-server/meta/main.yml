@@ -1,0 +1,7 @@
+---
+dependencies:
+  - role: geerlingguy.redis
+    vars:
+      redis_maxmemory: 512Mb
+      redis_maxmemory_policy: allkeys-lru
+      redis_bind_interface: "{{ redis_host }}"

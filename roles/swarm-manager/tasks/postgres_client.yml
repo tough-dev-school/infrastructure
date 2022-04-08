@@ -1,0 +1,12 @@
+---
+  - name: Add postgresql.org GPG key
+    apt_key:
+      url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+
+  - name: Add postgresql.org APT repo
+    apt_repository:
+      repo: 'deb https://apt.postgresql.org/pub/repos/apt focal-pgdg main'
+
+  - name: Install postgresql client
+    apt:
+      name: postgresql-client-13

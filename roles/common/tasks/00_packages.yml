@@ -1,0 +1,9 @@
+---
+- name: Install required packages
+  apt:
+    update_cache: true
+    name:
+      - acl
+      - net-tools
+      - python3-psycopg2
+      - python3-passlib

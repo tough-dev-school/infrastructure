@@ -1,0 +1,35 @@
+---
+- name: Common configuration
+  hosts: all
+  vars_files:
+    - vars/main.yml
+    - vars/secrets.yml
+  roles:
+    - common
+
+- name: Swarm manager
+  hosts: managers
+  vars_files:
+    - vars/main.yml
+    - vars/secrets.yml
+    - vars/tg-antispam.yml
+    - vars/metabase.yml
+  roles:
+    - name: swarm-manager
+      tags: swarm
+
+- name: Postgres master
+  hosts: db
+  vars_files:
+    - vars/main.yml
+    - vars/secrets.yml
+    - vars/tg-antispam.yml
+    - vars/metabase.yml
+
+  roles:
+    - name: pg-master
+      tags: postgres
+    - name: rabbitmq-server
+      tags: rabbitmq
+    - name: redis-server
+      tags: redis

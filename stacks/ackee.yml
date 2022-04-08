@@ -1,0 +1,38 @@
+---
+- name: Make sure stack directory is present
+  file:
+    path: /srv/ackee
+    state: directory
+
+- name: Deploy environment files
+  template:
+    src: env/{{ item }}
+    dest: /srv/ackee/{{ item }}
+  loop:
+    - ackee.env
+
+- name: Deploy the ackee stack
+  docker_stack:
+    name: ackee
+    resolve_image: never
+    with_registry_auth: true
+    compose:
+      - version: "3.6"
+        services:
+          backend:
+            image: electerious/ackee:3.3.1
+            env_file: /srv/ackee/ackee.env
+            deploy:
+              update_config:
+                failure_action: rollback
+              labels:
+                - "traefik.enable=true"
+                - "traefik.port=3000"
+                - "traefik.frontend.rule=Host:a.tough-dev.school"
+                - "traefik.docker.network=traefiknet"
+            networks:
+              - traefiknet
+
+        networks:
+          traefiknet:
+            external: true

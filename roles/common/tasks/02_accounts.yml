@@ -1,0 +1,23 @@
+---
+- name: Add accounts
+  user:
+    name: "{{ item }}"
+    groups:
+      - root
+      - sudo
+    shell: /bin/bash
+  loop:
+    - f213
+    - samat
+
+- name: Add ssh keys
+  authorized_key:
+    user: "{{ item.username }}"
+    key: "{{ item.key }}"
+  loop:
+    - username: f213
+      key: https://github.com/f213.keys
+    - username: samat
+      key: https://github.com/gsamat.keys
+  loop_control:
+    label: "{{ item.username }}"

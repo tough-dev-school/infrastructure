@@ -1,0 +1,13 @@
+defaultEntryPoints = ["http"]
+
+[entryPoints]
+  [entryPoints.http]
+  address = ":80"
+
+[docker]
+exposedByDefault = false
+swarmMode = true
+watch = true
+
+[retry]
+attempts = 3

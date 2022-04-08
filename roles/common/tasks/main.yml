@@ -1,0 +1,6 @@
+---
+- include_tasks: 00_packages.yml
+- include_tasks: 01_sudo.yml
+- include_tasks: 02_accounts.yml
+- include_tasks: 03_docker.yml
+- include_tasks: 04_ci_cd.yml
