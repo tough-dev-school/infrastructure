@@ -6,6 +6,5 @@ dependencies:
       swap_swappiness: 5
   - role: geerlingguy.security
     vars:
-      security_ssh_permit_root_login: "yes"
+      security_ssh_permit_root_login: "no"
       security_ssh_password_authentication: "no"
-      security_fail2ban_enabled: off

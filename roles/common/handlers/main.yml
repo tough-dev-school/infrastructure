@@ -1,6 +1,12 @@
 ---
 - name: restart network
-  become: yes
-  service:
+  ansible.builtin.service:
     name: networking
     state: restarted
+  become: yes
+
+- name: Reload sshd
+  ansible.builtin.service:
+    name: ssh
+    state: reloaded
+  become: yes

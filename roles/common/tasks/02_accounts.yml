@@ -1,17 +1,18 @@
 ---
 - name: Add accounts
-  user:
+  ansible.builtin.user:
     name: "{{ item }}"
     groups:
       - root
       - sudo
+      - ssh
     shell: /bin/bash
   loop:
     - f213
     - samat
 
 - name: Add ssh keys
-  authorized_key:
+  ansible.posix.authorized_key:
     user: "{{ item.username }}"
     key: "{{ item.key }}"
   loop:
@@ -21,3 +22,11 @@
       key: https://github.com/gsamat.keys
   loop_control:
     label: "{{ item.username }}"
+
+- name: Limit access to only users of _ssh group
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    search_string: AllowGroups
+    line: AllowGroups ssh
+  notify:
+    - Reload sshd
