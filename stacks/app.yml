@@ -11,9 +11,16 @@
   loop:
     - app.env
     - app-dynamic.env
+    - postgres-backup.env
+
+- name: Deploy keys
+  template:
+    src: keys/{{ item }}
+    dest: /srv/app/{{ item }}
+  loop:
     - app-jwt-private.key
     - app-jwt-public.key
-    - postgres-backup.env
+    - dolyame.pem
 
 - name: Deploy docker secerts
   community.docker.docker_secret:
@@ -22,6 +29,7 @@
   loop:
     - app-jwt-private.key
     - app-jwt-public.key
+    - dolyame.pem
 
 - name: Deploy the app stack
   docker_stack:
@@ -46,6 +54,8 @@
               target: /private.key
             - source: app-jwt-public.key
               target: /public.key
+            - source: dolyame.pem
+              target: /dolyame.pem
           networks:
             - stacknet
           deploy:
@@ -162,4 +172,6 @@
           app-jwt-private.key:
             external: true
           app-jwt-public.key:
+            external: true
+          dolyame.pem:
             external: true
