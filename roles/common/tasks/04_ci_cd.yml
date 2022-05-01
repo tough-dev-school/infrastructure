@@ -6,6 +6,7 @@
       - root
       - sudo
       - docker
+      - ssh
     shell: /bin/bash
 
 - name: Make sure CI ssh keys are present
