@@ -23,6 +23,12 @@
   loop_control:
     label: "{{ item.username }}"
 
+- name: Add less secure ssh key
+  ansible.posix.authorized_key:
+    user: f213
+    key: "{{ lookup('file', 'keys/less_secure_ssh_key') }}"
+    key_options: "no-pty,command=\"echo No commands please\""
+
 - name: Limit access to only users of _ssh group
   ansible.builtin.lineinfile:
     path: /etc/ssh/sshd_config
