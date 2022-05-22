@@ -1,0 +1,38 @@
+---
+- name: Make sure stack directory is present
+  file:
+    path: /srv/finolog
+    state: directory
+
+- name: Deploy environment files
+  template:
+    src: env/{{ item }}
+    dest: /srv/finolog/{{ item }}
+  loop:
+    - stripe-payouts-to-finolog.env
+
+- name: Deploy the finolog stack
+  docker_stack:
+    name: finolog
+    resolve_image: never
+    with_registry_auth: true
+    compose:
+      - version: "3.6"
+        services:
+          stripe_payouts:
+            image: ghcr.io/tough-dev-school/stripe-payouts-to-finolog
+            env_file: /srv/finolog/stripe-payouts-to-finolog.env
+            deploy:
+              update_config:
+                failure_action: rollback
+              labels:
+                - "traefik.enable=true"
+                - "traefik.port=8000"
+                - "traefik.frontend.rule=Host:stripe-payouts-to-finolog.tough-dev.school"
+                - "traefik.docker.network=traefiknet"
+            networks:
+              - traefiknet
+
+        networks:
+          traefiknet:
+            external: true
