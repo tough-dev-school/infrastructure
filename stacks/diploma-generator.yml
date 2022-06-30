@@ -1,0 +1,36 @@
+- name: Make sure stack directory is present
+  file:
+    path: /srv/diploma-generator
+    state: directory
+
+- name: Deploy environment files
+  template:
+    src: env/{{ item }}
+    dest: /srv/diploma-generator/{{ item }}
+  loop:
+    - diploma-generator.env
+
+- name: Deploy the diploma-generator stack
+  docker_stack:
+    name: diploma-generator
+    resolve_image: never
+    with_registry_auth: true
+    compose:
+      - version: "3.6"
+        services:
+          backend:
+            image: ghcr.io/tough-dev-school/diploma-generator
+            env_file: /srv/diploma-generator/diploma-generator.env
+            deploy:
+              update_config:
+                failure_action: rollback
+              labels:
+                - "traefik.enable=true"
+                - "traefik.port=3000"
+                - "traefik.frontend.rule=Host:diploma-generator.tough-dev.school"
+            networks:
+              - traefiknet
+
+        networks:
+          traefiknet:
+            external: true

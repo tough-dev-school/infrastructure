@@ -9,4 +9,6 @@
 - include_tasks: stacks/metabase.yml
 - include_tasks: stacks/invoice.yml
 - include_tasks: stacks/tg-antispam.yml
+- include_tasks: stacks/diploma-generator.yml
 - include_tasks: stacks/finolog.yml
+
